@@ -1,5 +1,8 @@
 data/**
 __pycache__/
+**/log*.out
+**/log*.err
+**/\#*.top*\#
 **/*.py[cod]
 **/*$py.class
 **/*.ipynb_checkpoints
