@@ -5,7 +5,11 @@ from pathlib import Path
 import warnings
 from typing import List, Tuple
 import inspect
+import numpy as np
+from decimal import Decimal
 
+
+SOLVENTS_LIB_DIR = '../data/cosolvent_libs/'
 
 def run_pdb2pqr(input_pdb: str, 
                 output_basename: str,
@@ -53,12 +57,20 @@ def run_obabel(input_ligand: str,
                              encoding = 'UTF-8')
         p.communicate()
 
-
+    # Save mol2
     obabel_command = 'obabel ' + \
                      f'-ipdb {input_ligand} ' + \
                      f'-omol2 -O {output_name} ' + \
-                     ('' if use_amber_reduce else f'-p {ph} ') + \
-                     f'--partialcharge {partial_charges}'
+                     f'--partialcharge "{partial_charges}" ' + \
+                     ('' if use_amber_reduce else f'-p {ph} ')
+                     # f'--minimize --steps 1500 --sd --ff "GAFF" '
+
+    ps = subprocess.Popen(obabel_command, 
+                          shell  = True, 
+                          stdout = subprocess.PIPE,
+                          stderr = subprocess.STDOUT,
+                          encoding = 'UTF-8')
+    output, error = ps.communicate()
 
     ps = subprocess.Popen(obabel_command, 
                           shell  = True, 
@@ -73,7 +85,7 @@ def run_obabel(input_ligand: str,
 
 
 
-def run_get_charge(filename: str) -> int:
+def run_get_charge(filename: str, round_value: bool = True) -> int:
     get_charge_command = "sed -n '/@<TRIPOS>ATOM/,/@<TRIPOS>BOND/p' " + \
                             f"{filename}" + \
                             " | sed '1d;$d' | awk '{ SUM += $NF} END {print SUM}'"
@@ -82,15 +94,67 @@ def run_get_charge(filename: str) -> int:
                           encoding='UTF-8')
     output = ps.communicate()[0]
     charge = float(output.replace('\n', ''))
-    LIG_NET_CHARGE = round(charge)
+    if round_value:
+        LIG_NET_CHARGE = round(charge)
+    else:
+        LIG_NET_CHARGE = charge
     return LIG_NET_CHARGE
+
+
+def correct_non_integer_charges(mol2_file: str):
+    LIG_FLOAT_CHARGE = run_get_charge(
+                            filename = mol2_file, 
+                            round_value = False)
+    
+    print('Current charge:', LIG_FLOAT_CHARGE)
+    with open(mol2_file, 'r') as f:
+        lines = f.readlines()
+        # Get atom files
+        atom_lines = []
+        start = lines.index('@<TRIPOS>ATOM\n')
+        end   = lines.index('@<TRIPOS>BOND\n')
+        atom_lines = lines[start + 1: end]
+
+        # get charges
+        charges = np.array([float(l.split()[-1]) 
+                            for l in atom_lines])
+
+        closest_int = round(LIG_FLOAT_CHARGE)
+        frac = round(float(Decimal(LIG_FLOAT_CHARGE - closest_int)), 6)
+            
+        print(LIG_FLOAT_CHARGE)
+        print(frac)
+        # Check if the charge is positive or negative
+        if closest_int < 0:
+            max_idx   = np.argmax(charges)
+            new_value = round(Decimal(charges[max_idx] - frac), 6)
+            print(charges[max_idx], '->', new_value)
+        else:
+            max_idx = np.argmin(charges)
+            new_value = round(Decimal(charges[max_idx] - frac), 6)
+            print(charges[max_idx], '->', new_value)
+        # Update charges
+        charges[max_idx] = new_value
+        charges_str = [str(round(Decimal(c), 6)) + '\n' 
+                       for c in charges]
+        charges_str = [s if s[0] == '-' else ' ' + s 
+                       for s in charges_str]
+        # update atom_lines
+        new_atom_lines = [l[:-10] + c 
+                          for l, c in zip(atom_lines, charges_str)]
+        first_block = lines[:start + 1]
+        end_block   = lines[end: ]
+        final_lines = first_block + new_atom_lines + end_block
+
+    with open(mol2_file, 'w') as f:
+        f.writelines(final_lines)
 
 
 
 def run_parmchk2(mol2_filename: str, 
                  frcmod_filename: str,
                  verbose: bool = True):
-    parmchk2_command = f'parmchk2 -i {mol2_filename} -f mol2 -o {frcmod_filename}'
+    parmchk2_command = f'parmchk2 -i {mol2_filename} -f mol2 -o {frcmod_filename} -s gaff'
 
     ps = subprocess.Popen(parmchk2_command, 
                           shell  = True, 
@@ -112,7 +176,7 @@ def run_antechamber(mol2_filename: str,
                     verbose: bool = True):
     antechamber_command = f"antechamber -i {mol2_filename}" + \
                 f" -fi mol2 -o {output_dir}/LIG.mol2" + \
-                 " -fo mol2 -c bcc -s 2" + \
+                 " -fo mol2 -c bcc -s 2 -at gaff -eq 2" + \
                 f" -rn {lig_resname}" + \
                 f" -nc {lig_net_charge}"
 
@@ -123,6 +187,11 @@ def run_antechamber(mol2_filename: str,
                           encoding = 'UTF-8')
     output, error = ps.communicate()
 
+    if verbose:
+        print(output)
+        print(error)
+        
+
     # Move the intermediate files
     move_temp_files_command = f'mv -v ANTECHAMBER* ATOMTYPE.INF sqm* {output_dir}'
     ps = subprocess.Popen(move_temp_files_command, 
@@ -131,17 +200,15 @@ def run_antechamber(mol2_filename: str,
                           stderr = subprocess.STDOUT,
                           encoding = 'UTF-8')
     o, e = ps.communicate()
-    
+
+    # Check partial charges
+    correct_non_integer_charges(f"{output_dir}/LIG.mol2")
+
     # Run PARMCHK2
     run_parmchk2(mol2_filename = f'{output_dir}/LIG.mol2', 
                  frcmod_filename = f'{output_dir}/LIG.frcmod')
 
-    if verbose:
-        print(output)
-        print(error)
-        
-
-
+    
 
 
 def run_leap_lig_lib(tmp_dir: str, 
@@ -212,8 +279,8 @@ def _add_tleap_head_lines(input_ligand_basename: str = None,
         """)
 
     if solvent_type != 'TIP3PBOX':
-        assert os.path.isfile(f'./{solvent_type}.off'), f'Please provide the `{solvent_type}`.off file'
-        _solvent_type_lines = f'loadoff ./{solvent_type}.off'
+        assert os.path.isfile(f'{SOLVENTS_LIB_DIR}/{solvent_type}.off'), f'Please provide the `{solvent_type}`.off file'
+        _solvent_type_lines = f'loadoff {SOLVENTS_LIB_DIR}/{solvent_type}.off'
 
     head_lines = inspect.cleandoc(
         f"""
@@ -321,8 +388,11 @@ def run_tleap_prepare_pl_complex(output_basename: str,
     check system
 
     saveamberparm system {tmp_dir}/{output_basename}.prmtop {tmp_dir}/{output_basename}.rst7
+    # Protein charge
     charge protein
+    # Ligand charge
     charge ligand
+    # System charge
     charge system
     quit
     """
@@ -520,7 +590,7 @@ def get_tleap_neutralization_line(ION_MOLAR: float,
         _N_WAT_MOLS_1L = _WAT_DENSITY / _WAT_MOL_MASS * 1000
         N_IONS = int(N_WATS / _N_WAT_MOLS_1L * ION_MOLAR)
 
-        print(N_IONS, ION_MOLAR, N_WATS, sys_CHARGE)
+        #print(N_IONS, ION_MOLAR, N_WATS, sys_CHARGE)
 
         # Number of ions to get the required MOLAR concentration
         N_Na = N_IONS
@@ -622,3 +692,134 @@ def run_center_system_to_origin(filename: str,
         pass
 
 
+
+def create_posre_prot(input_pdb: str, 
+                      posre_basename: str,
+                      out_dir: str,
+                      verbose: bool = True):
+    
+    POSRE_FILENAME = f"{posre_basename}.prot_posre.itp"
+    
+    gmx_posre_command = f'gmx pdb2gmx -f {input_pdb}' +\
+                        f' -o ./TEMP.gro' +\
+                        f' -p ./TEMP.top' +\
+                        f' -i {out_dir}/{POSRE_FILENAME}' +\
+                         ' -ff amber99sb-ildn -water tip3p -ignh'
+    
+    ps = subprocess.Popen(gmx_posre_command, 
+                           shell  = True, 
+                           stdout = subprocess.PIPE,
+                           stderr = subprocess.STDOUT,
+                           encoding = 'UTF-8')
+    output, error = ps.communicate()
+    os.remove('./TEMP.gro')
+    os.remove('./TEMP.top')
+    if verbose:
+        print(output)
+        print(error)
+
+
+
+def include_posre_in_top(input_top_file: str, 
+                         out_top_file: str, 
+                         posre_filename: str,
+                         molecule_index: int = 1,
+                         posre_sufix: str = 'prot_posre'
+                       ):
+    POSRES_LINES = [
+        '; Include Position restraint file for protein\n',
+        '#ifdef POSRES\n',
+        f'#include "{posre_filename}"\n',
+        '#endif\n',
+        '\n','\n'
+    ]
+
+    with open(input_top_file) as in_topfile:
+        top_lines = in_topfile.readlines()
+        mol_type_str = '[ moleculetype ]'
+        mol_type_idxs = [i for (i, l) in enumerate(top_lines) 
+                         if l.startswith(mol_type_str)]
+
+    # Insert POSRES_LINES between the last lines of the protein definition
+    # and the lines of the solvent definitions
+    second_molecule_type_idx = mol_type_idxs[molecule_index]
+    FIRST_BLOCK  = top_lines[:second_molecule_type_idx]
+    SECOND_BLOCK = top_lines[second_molecule_type_idx:]
+
+    with open(out_top_file, 'w') as out_topfile:
+        out_topfile.writelines(
+            FIRST_BLOCK + POSRES_LINES + SECOND_BLOCK
+        )
+
+
+def create_posre_file(input_gro: str, 
+                      out_posre_filename: str,
+                      tmp_dir: str = '.',
+                      mol_selection = 'protein',
+                      rest_energies = [1000, 1000, 1000],
+                      verbose: bool = True):
+    
+    SELECTIONS = {
+        'protein': "2\n q",
+        'ligand': "r LIG & ! a H*\n q"
+    }
+    
+    assert mol_selection in SELECTIONS.keys(), \
+    'Only `protein` and `ligand` sel available for `mol_selection`'
+
+    # Create the .gro file
+    if mol_selection == 'ligand':
+        GRO_SELECTION = '13'
+    elif mol_selection == 'protein':
+        GRO_SELECTION = '1'
+    
+    # Create the gro file
+    gmx_gro_command = f'echo "{GRO_SELECTION}" | gmx trjconv' +\
+                      f' -f {input_gro} -s {input_gro}' +\
+                      f' -o {out_posre_filename}.{mol_selection}.gro'
+    ps_gro = subprocess.Popen(gmx_gro_command, 
+                           shell  = True, 
+                           stdout = subprocess.PIPE,
+                           stderr = subprocess.STDOUT,
+                           encoding = 'UTF-8')
+    output, error = ps_gro.communicate()
+
+    
+    # make_ndx
+    gmx_make_ndx = f'echo "' + SELECTIONS[mol_selection] + '" |' +\
+                        f' gmx make_ndx' +\
+                        f' -f {out_posre_filename}.{mol_selection}.gro' +\
+                        f' -o {out_posre_filename}.ndx'
+    ps_ndx = subprocess.Popen(gmx_make_ndx, 
+                           shell  = True, 
+                           stdout = subprocess.PIPE,
+                           stderr = subprocess.STDOUT,
+                           encoding = 'UTF-8')
+    output, error = ps_ndx.communicate()
+    
+    
+    SELECTIONS_GPRS = {
+        'protein': "2",
+        'ligand': "LIG_&_!H*"
+    }
+    
+    gmx_genrestr = f'echo "' + SELECTIONS_GPRS[mol_selection] + '" |' +\
+                        f' gmx genrestr' +\
+                        f' -f {input_gro}' +\
+                        f' -n {out_posre_filename}.ndx' +\
+                        f' -o {out_posre_filename}' +\
+                        f' -fc ' +\
+                        ' '.join([str(e) for e in rest_energies])
+    ps_rest = subprocess.Popen(gmx_genrestr, 
+                           shell  = True, 
+                           stdout = subprocess.PIPE,
+                           stderr = subprocess.STDOUT,
+                           encoding = 'UTF-8')
+    output, error = ps_rest.communicate()
+    
+    os.remove(f'{out_posre_filename}.ndx')
+    os.remove(f'{out_posre_filename}.{mol_selection}.gro')
+    
+    if verbose:
+        print(output)
+        print(error)
