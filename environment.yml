@@ -1,0 +1,19 @@
+name: cdk2_gromacs_md 
+channels:
+  - defaults
+dependencies:
+  - biobb_analysis==3.6.0
+  - plotly
+  - biobb_chemistry==3.6.0
+  - biobb_md==3.6.0
+  - biobb_model==3.6.0
+  - biobb_io==3.6.0
+  - conda
+  - nb_conda_kernels
+  - nglview
+  - simpletraj
+  - biobb_structure_utils==3.6.1
+  - pdb2pqr
+  - modeller
+  - prody
+prefix: /Users/joelricci/miniconda/envs/biobb
