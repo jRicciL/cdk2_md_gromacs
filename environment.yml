@@ -16,4 +16,3 @@ dependencies:
   - pdb2pqr
   - modeller
   - prody
-prefix: /Users/joelricci/miniconda/envs/biobb
