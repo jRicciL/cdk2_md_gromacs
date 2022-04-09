@@ -44,7 +44,7 @@ def get_seq_from_uniprot(uniprot_id: str,
     return seq_prot
 
 
-def pdb_ids_from_uniprot(uniprot_id: str, 
+def get_pdb_ids_from_uniprot(uniprot_id: str, 
                          time_sleep: int = 2) -> pd.DataFrame:
     '''
     This function performs a web scrapping on the uniprot 
