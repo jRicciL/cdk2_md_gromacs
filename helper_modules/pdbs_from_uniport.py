@@ -115,7 +115,7 @@ def get_useful_pdbids(df_pdb_ids: pd.DataFrame,
     return df_ids
 
 
-def get_bounded_ligands(pdb_id: str, 
+def get_cocrystal_ligand(pdb_id: str, 
                         entity_id: int = 1) -> List:
     '''
     Given a valid `pdb_id` and an entity number (`entity_d`)
