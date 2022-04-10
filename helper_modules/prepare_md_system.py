@@ -122,17 +122,13 @@ def correct_non_integer_charges(mol2_file: str):
         closest_int = round(LIG_FLOAT_CHARGE)
         frac = round(float(Decimal(LIG_FLOAT_CHARGE - closest_int)), 6)
             
-        print(LIG_FLOAT_CHARGE)
-        print(frac)
         # Check if the charge is positive or negative
         if closest_int < 0:
             max_idx   = np.argmax(charges)
             new_value = round(Decimal(charges[max_idx] - frac), 6)
-            print(charges[max_idx], '->', new_value)
         else:
             max_idx = np.argmin(charges)
             new_value = round(Decimal(charges[max_idx] - frac), 6)
-            print(charges[max_idx], '->', new_value)
         # Update charges
         charges[max_idx] = new_value
         charges_str = [str(round(Decimal(c), 6)) + '\n' 
@@ -166,7 +162,6 @@ def run_parmchk2(mol2_filename: str,
     if verbose:
         print(output)
         print(error)
-
 
 
 def run_antechamber(mol2_filename: str, 
