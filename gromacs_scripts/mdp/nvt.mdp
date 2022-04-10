@@ -1,4 +1,5 @@
 ; Addapted from GROMACS Tutorial: http://www.mdtutorials.com/gmx/lysozyme/index.html
+; Credits: Samuel Musson and Matteo Degiacomi, Degiacomi-Lab, Durham University
 title                     = Amber14SS protein NVT equilibration
 define                    = -DPOSRES   ; position restrain the protein
 

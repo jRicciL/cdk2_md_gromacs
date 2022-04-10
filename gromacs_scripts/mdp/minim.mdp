@@ -1,5 +1,6 @@
 ; minim.mdp - used as input into grompp to generate em.tpr
 ; Addapted from GROMACS Tutorial: http://www.mdtutorials.com/gmx/lysozyme/index.html
+; Credits: Samuel Musson and Matteo Degiacomi, Degiacomi-Lab, Durham University
 
 define         = -DFLEXIBLE     ; flexible water
 
