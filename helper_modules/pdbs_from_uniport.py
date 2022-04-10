@@ -6,6 +6,7 @@ from typing import Tuple, List
 import pandas as pd
 from Bio import pairwise2, SeqIO
 import time
+import os
 
 def get_structure_sequence(pdb_id: str, 
                            chain: str = 'A') -> Tuple:
@@ -24,6 +25,18 @@ def get_structure_sequence(pdb_id: str,
     # Get the initial and final positions
     positions = ref_struc.getResnums() 
     return seq_cry, positions
+
+
+def get_nonstd_aa(pdb_file: str):
+    assert os.path.isfile(pdb_file), f'File {pdb_file} does not exist'
+    pdb = parsePDB(pdb_file)
+    nonstd_selection = pdb.select('nonstdaa and ca')
+    if nonstd_selection == None:
+        return (None, None)
+    else:
+        resnames = nonstd_selection.getResnames()
+        resnums  = nonstd_selection.getResnums()
+        return (resnames, resnums)
 
 
 def get_seq_from_uniprot(uniprot_id: str, 
