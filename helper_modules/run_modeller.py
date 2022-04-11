@@ -1,4 +1,3 @@
-import shutil
 import os
 from prody import parsePDB, writePDB
 from Bio import pairwise2, SeqIO
@@ -193,6 +192,7 @@ class MyModel(AutoModel):
         writePDB(output_model_file, ref_model)
 
     # Delete nonuseful files
-    os.rename(f'{base_name}.alg', f'{output_dir}/{base_name}.modeller.alg')
+    os.remove(f'{base_name}.alg')
+    # os.rename(f'{base_name}.alg', f'{output_dir}/{base_name}.modeller.alg')
     for f in glob(model_base_name + "*"):
         os.remove(f)
