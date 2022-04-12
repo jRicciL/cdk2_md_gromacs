@@ -40,7 +40,7 @@ def secondary_struc(traj_obj: pytraj.Trajectory,
     return dssp_traj[1]
 
 def label_cdk2_conformations(traj_obj, 
-                             saltbridge_cutoff   = 8,
+                             saltbridge_cutoff   = 7.0,
                              dfg_angle_cutoff    = -135.0,
                              aC_b4b5_dist_cutoff = 12.5):
 
@@ -55,7 +55,7 @@ def label_cdk2_conformations(traj_obj,
     
     # Evaluates if the structure is Open
     # Measures the distance between geometric centers of
-    # the αC-helix (residues 46 to 57) and the β4-β5 (66-72, 75-81) strands
+    # the αC-helix (residues 46 to 57) and the β4-β5 (66-72, 75-81) sheets 
     aC_b4b5_distances = get_geom_center_distance(
                             traj_obj, 
                             ':46-57', ':66-72,75-81')
