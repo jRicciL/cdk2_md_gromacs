@@ -34,7 +34,7 @@ def format_plotly(fig, height = 600, width = 800):
         'yanchor': 'top'},
         xaxis = dict(
             title={
-                'text': 'First Dimension',
+                #'text': 'First Dimension',
                 'standoff': 0,
                 'font': {
                     'size': 17
@@ -46,7 +46,7 @@ def format_plotly(fig, height = 600, width = 800):
         ),
         yaxis = dict(
             title={
-                'text': 'Second Dimension',
+                #'text': 'Second Dimension',
                 'standoff': 0,
                 'font': {
                     'size': 17
