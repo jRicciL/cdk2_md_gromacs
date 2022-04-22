@@ -18,7 +18,7 @@ def get_phi_angle(traj_obj: pytraj.Trajectory,
     phi = pytraj.calc_phi(traj_obj, 
                        resrange = str(residue))
     # phi.values is an array of n times n_frames
-    return phi
+    return phi.to_ndarray()
 
 def get_geom_center_distance(traj_obj: pytraj.Trajectory, 
                              resmask_1: str, 
@@ -41,17 +41,17 @@ def secondary_struc(traj_obj: pytraj.Trajectory,
 
 def label_cdk2_conformations(traj_obj, 
                              saltbridge_cutoff   = 7.0,
-                             dfg_angle_cutoff    = -135.0,
-                             aC_b4b5_dist_cutoff = 12.5):
+                             dfg_angle_cutoff    = 135.0,
+                             aC_b4b5_dist_cutoff = 14.0):
 
     # Evaluates if the salt bridge between LYS33-GLU51 exists
     att_1 = get_distance_ij(traj_obj, ':33@NZ', ':51@CD')
     is_salt_bridge = att_1 < saltbridge_cutoff
     
     # Evaluates if the structure is DFG-OUT
-    # The phi angle between ASP145 and PHE146 is below -135.0
+    # The phi angle between ASP145 and PHE146 is above abs(135.0)
     att_2 = get_phi_angle(traj_obj, residue = 145)
-    is_dfg_out = att_2[0][:] < dfg_angle_cutoff
+    is_dfg_out = np.absolute(att_2) > dfg_angle_cutoff
     
     # Evaluates if the structure is Open
     # Measures the distance between geometric centers of
