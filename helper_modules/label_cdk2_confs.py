@@ -41,9 +41,9 @@ def secondary_struc(traj_obj: pytraj.Trajectory,
 
 def label_cdk2_conformations(traj_obj, 
                              saltbridge_cutoff   = 7.0,
-                             dfg_angle_cutoff    = 135.0,
-                             aC_b4b5_dist_cutoff = 14.0,
-                             dist_PHE146_GLY11   = 7.0
+                             dfg_angle_cutoff    = 110.0,
+                             aC_b4b5_dist_cutoff = 13.5,
+                             dist_PHE146_GLY11   = 12.0
                              ):
 
     # Evaluates if the salt bridge between LYS33-GLU51 exists
