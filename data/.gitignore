@@ -3,4 +3,4 @@ md_system_prep/**
 md_trajectories/**
 PROD_trajs/**
 old_md_trajectories/**
-md_medoid_conformations/MDconfsOnMDconfs/*.pdb
+md_medoid_conformations/**
