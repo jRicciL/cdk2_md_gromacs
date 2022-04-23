@@ -12,10 +12,7 @@ def get_system_chuncks(df_all_systems,
      
     # Replace the 'Conf. type' column 
     # to the name of the reference conf.
-#     pdbid_confTypes_inverted = dict(
-#         (v, k) for k, v in pdbid_confTypes.items())
     df_ = df_all_systems.copy()
-#     df_ = df_.replace(pdbid_confTypes_inverted)
 
     # Add a `frame_numbers` column to identify
     # the # of frame inside each trajectory
