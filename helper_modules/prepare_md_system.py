@@ -752,18 +752,22 @@ def create_posre_file(input_gro: str,
                       tmp_dir: str = '.',
                       mol_selection = 'protein',
                       rest_energies = [1000, 1000, 1000],
+                      specify_index_mol = None,
                       verbose: bool = True):
     
     SELECTIONS = {
         'protein': "2\n q",
-        'ligand': "r LIG & ! a H*\n q"
+        'ligand': "r LIG & ! a H*\n q",
+        'MG': "r MG\n q"
     }
     
-    assert mol_selection in SELECTIONS.keys(), \
-    'Only `protein` and `ligand` sel available for `mol_selection`'
+    # assert mol_selection in SELECTIONS.keys(), \
+    # 'Only `protein` and `ligand` sel available for `mol_selection`'
 
     # Create the .gro file
-    if mol_selection == 'ligand':
+    if specify_index_mol:
+        GRO_SELECTION = str(specify_index_mol)
+    elif mol_selection == 'ligand':
         GRO_SELECTION = '13'
     elif mol_selection == 'protein':
         GRO_SELECTION = '1'
@@ -795,7 +799,8 @@ def create_posre_file(input_gro: str,
     
     SELECTIONS_GPRS = {
         'protein': "2",
-        'ligand': "LIG_&_!H*"
+        'ligand': "LIG_&_!H*",
+        'MG': "3"
     }
     
     gmx_genrestr = f'echo "' + SELECTIONS_GPRS[mol_selection] + '" |' +\
